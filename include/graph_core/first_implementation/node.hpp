@@ -7,16 +7,17 @@ template <typename T>
 class Node {
 private:
 	T data;
-	std::list<Node*> neighbours;
+	//Weak_ptr allows you to see your neighbors without owning them
+	std::list<std::weak_ptr<Node<T>>> neighbours;
 public:
 	//Construstors and destructor
 	template <typename = std::enable_if<std::is_default_constructible<T>, void>>
 	Node() : data() {}
 	template <typename = std::enable_if<std::is_default_constructible<T>, void>>
-	Node(T _data = T(), std::initializer_list<Node*> init = {}) :data(_data) {
+	Node(T _data = T(), std::initializer_list<std::shared_ptr<Node<T>>> init = {}) :data(_data) {
 		neighbours.insert(neighbours.end(), init.begin(), init.end());
 	}
-	Node(T _data, std::initializer_list<Node*> init = {}) : data(_data) {
+	Node(T _data, std::initializer_list< std::shared_ptr<Node<T>>> init = {}) : data(_data) {
 		neighbours.insert(neighbours.end(), init.begin(), init.end());
 	}
 	Node(const Node& other) {
@@ -62,7 +63,7 @@ public:
 	const T& get_data() const {
 		return data;
 	}
-	const std::list<Node*>& get_neibours() const {
+	const std::list<std::weak_ptr<Node<T>>>& get_neibours() const {
 		return neighbours;
 	}
 };
