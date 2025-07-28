@@ -18,12 +18,14 @@ public:
 	std::shared_ptr<Node<T>> get_to_node() {
 		return to_node;
 	}
-
 	const std::shared_ptr<Node<T>> get_to_node() const {
 		return to_node;
 	}
 
+	void set_weight(const WEIGHT_TYPE _weight) {
+		weight = _weight;
+	}
 	WEIGHT get_weight() const {
 		return weight;
 	}
-};
+	
