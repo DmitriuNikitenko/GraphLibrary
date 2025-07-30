@@ -14,6 +14,13 @@
 template <typename T, typename WEIGHT_TYPE = int>
 class Graph {
 private:
+	std::vector<std::shared_ptr<Node<T>>> nodes;
+	std::vector<std::list<Edge<T, WEIGHT_TYPE>>> adj_list;
+	/*
+	A vertex in the vertices vector with index i = 1 - vertices.size
+	corresponds to a list of edges with index i = 1 - adj_list.size = 1 - vertices.size,
+	emanating from this vertex.
+	*/
 	size_t get_index_node(std::shared_ptr<Node<T>> node) {
 		if (!node) {
 			throw std::runtime_error("Invalid index node");
@@ -28,14 +35,6 @@ private:
 		throw std::runtime_error("Invalid index node");
 	}
 public:
-	std::vector<std::shared_ptr<Node<T>>> nodes;
-	std::vector<std::list<Edge<T, WEIGHT_TYPE>>> adj_list;
-	/*
-	A vertex in the vertices vector with index i = 1 - vertices.size
-	corresponds to a list of edges with index i = 1 - adj_list.size = 1 - vertices.size,
-	emanating from this vertex.
-	*/
-
 	//Construstors and destructor
 	template <typename = std::enable_if<std::is_default_constructible<T>, void>>
 	Graph() : nodes(), adj_list() {}
@@ -292,17 +291,25 @@ public:
 	bool empty() const {
 		return nodes.size() == 0;
 	}
-	bool isConnected() const;
-	bool isomorphic(const Graph<T, WEIGHT_TYPE>& other);
-	std::vector<std::vector<std::shared_ptr<Node<T>>>> getConnectedComponents() const;
-
-
-	void saveToFile(std::string filename);
-	void loadFromFile(std::string filename);
 
 
 	//Operators
-	Graph& operator=(const Graph& other);
-	Graph& operator=(Graph&& other);
+	Graph& operator=(const Graph& other) {
+		if (other != this) {
+			clear();
+			nodes = other.nodes;
+			adj_list = other.adj_list;
+		}
+		return *this;
+	}
+	Graph& operator=(Graph&& other) {
+		if (other != this) {
+			clear();
+			nodes = std::move(other.nodes);
+			adj_list = std::move(other.adj_list);
+		}
+		return *this;
+		return *this;
+	}
 
 };
