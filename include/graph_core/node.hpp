@@ -1,6 +1,8 @@
 #pragma once
 #include <list>
+#include <memory>
 #include <type_traits>
+#include <concepts>
 
 template <typename T>
 class Node {
@@ -10,14 +12,11 @@ private:
 	std::list<std::weak_ptr<Node<T>>> neighbours;
 public:
 	//Construstors and destructor
-	template <typename = std::enable_if<std::is_default_constructible<T>, void>>
-	Node() : data() {}
-	template <typename = std::enable_if<std::is_default_constructible<T>, void>>
-	Node(T _data = T()) :data(_data) {}
-	Node(T _data) : data(_data) {}
+	Node() requires std::default_initializable<T> : data() {}
+	Node(const T& _data) : data(_data) {}
+	Node(T&& _data) : data(std::move(_data)) {}
 	Node(const Node<T>& other) {
 		data = other.data;
-		neighbours.insert(other.neighbours.end(), other.neighbours.begin(), other.neighbours.end());
 	}
 	Node(Node<T>&& other) noexcept {
 		data = std::move(other.data);
@@ -27,15 +26,14 @@ public:
 
 	//Operators
 	Node<T>& operator=(const Node<T>& other) {
-		if (other != this) {
+		if (&other != this) {
 			data = other.data;
 			neighbours.clear();
-			neighbours.insert(other.neighbours.end(), other.neighbours.begin(), other.neighbours.end());
 		}
 		return *this;
 	}
 	Node<T>& operator=(Node<T>&& other) noexcept {
-		if (other != this) {
+		if (&other != this) {
 			data = std::move(other.data);
 			neighbours = std::move(other.neighbours);
 		}
@@ -68,7 +66,7 @@ public:
 	std::list<std::weak_ptr<Node<T>>>& get_neibours() {
 		return neighbours;
 	}
-	size_t get_node_index() const {
-		return index;
+	void add_neighbour(std::shared_ptr<Node<T>> neighbour) {
+		neighbours.push_back(neighbour);
 	}
 };
