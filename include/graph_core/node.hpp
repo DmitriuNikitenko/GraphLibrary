@@ -15,23 +15,12 @@ public:
 	Node() requires std::default_initializable<T> : data() {}
 	Node(const T& _data) : data(_data) {}
 	Node(T&& _data) : data(std::move(_data)) {}
-	Node(const Node<T>& other) {
-		data = other.data;
-	}
-	Node(Node<T>&& other) noexcept {
-		data = std::move(other.data);
-		neighbours = std::move(other.neighbours);
-	}
+	Node(const Node<T>& other) = delete;
+	Node(Node<T>&& other) noexcept : data(std::move(other.data)) , neighbours(std::move(other.neighbours)) {}
 	~Node() = default;
 
 	//Operators
-	Node<T>& operator=(const Node<T>& other) {
-		if (&other != this) {
-			data = other.data;
-			neighbours.clear();
-		}
-		return *this;
-	}
+	Node<T>& operator=(const Node<T>& other) = delete;
 	Node<T>& operator=(Node<T>&& other) noexcept {
 		if (&other != this) {
 			data = std::move(other.data);
@@ -40,10 +29,10 @@ public:
 		return *this;
 	}
 
-	bool operator==(const Node<T>& other) {
+	bool operator==(const Node<T>& other) const {
 		return data == other.data;
 	}
-	bool operator!=(const Node<T>& other) {
+	bool operator!=(const Node<T>& other) const {
 		return !(*this == other);
 	}
 
@@ -64,6 +53,9 @@ public:
 		return data;
 	}
 	std::list<std::weak_ptr<Node<T>>>& get_neibours() {
+		return neighbours;
+	}
+	const std::list<std::weak_ptr<Node<T>>>& get_neibours() const {
 		return neighbours;
 	}
 	void add_neighbour(std::shared_ptr<Node<T>> neighbour) {
