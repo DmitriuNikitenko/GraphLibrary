@@ -21,6 +21,82 @@ private:
 	corresponds to a list of edges with index i = 1 - adj_list.size = 1 - vertices.size,
 	emanating from this vertex.
 	*/
+
+	//Private functions
+	//Functions for searching and changing edges
+	std::vector<Edge<T, WEIGHT_TYPE>*> findEdgeMutable(
+		const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second,
+		WEIGHT_TYPE weight = 0, bool comparable_by_weight = true)
+	{
+		std::vector<Edge<T, WEIGHT_TYPE>*> result;
+
+		if (!node_first || !node_second) {
+			throw std::runtime_error("Wrong nodes value");
+		}
+
+		size_t index_first = get_index_node(node_first);
+		size_t index_second = get_index_node(node_second);
+
+		if (index_first >= adj_list.size() || index_second >= adj_list.size()) {
+			throw std::runtime_error("Adjacency list has invalid size");
+		}
+
+		auto& list_first = adj_list[index_first];
+		for (auto it = list_first.begin(); it != list_first.end(); ++it) {
+			auto to_node = it->get_to_node();
+			if (to_node && to_node == node_second) {
+				if (!comparable_by_weight || weight == it->get_weight()) {
+					result.push_back(&(*it));
+					break;
+				}
+			}
+		}
+
+		auto& list_second = adj_list[index_second];
+		for (auto it = list_second.begin(); it != list_second.end(); ++it) {
+			auto to_node = it->get_to_node();
+			if (to_node && to_node == node_first) {
+				if (!comparable_by_weight || weight == it->get_weight()) {
+					result.push_back(&(*it));
+					break;
+				}
+			}
+		}
+
+		return result;
+	}
+
+	Edge<T, WEIGHT_TYPE>* findEdgeOrientedMutable(
+		const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0, bool comparable_by_weight = true) {
+		if (!node_first || !node_second) {
+			throw std::runtime_error("Wrong nodes value");
+		}
+
+		size_t index_first = get_index_node(node_first);
+
+		if (index_first >= adj_list.size()) {
+			return nullptr;
+		}
+
+		auto& edge_list = adj_list[index_first];
+		for (auto& edge : edge_list) {
+			auto to_node = edge.get_to_node();
+			if (to_node && *to_node == *node_second) {
+				if (comparable_by_weight) {
+					if (edge.get_weight() == weight) {
+						return &edge;
+					}
+				}
+				else {
+					return &edge;
+				}
+
+			}
+		}
+		return nullptr;
+	}
+
+
 	size_t get_index_node(std::shared_ptr<Node<T>> node) const {
 		if (!node) {
 			throw std::runtime_error("Invalid index node");
@@ -32,10 +108,10 @@ private:
 			}
 		}
 
-		throw std::runtime_error("Invalid index node");
+		return std::string::npos;
 	}
 	//Function for unoriented edges
-	std::shared_ptr<Edge<T,WEIGHT_TYPE>> get_finding_edge(const std::vector<std::shared_ptr<Edge<T, WEIGHT_TYPE>>> vec, size_t pos){
+	const Edge<T,WEIGHT_TYPE>* get_finding_edge(std::vector<const Edge<T, WEIGHT_TYPE>*> vec, size_t pos){
 		if (pos != 0 && pos != 1) {
 			throw std::runtime_error("Wrong index in getter finding edge");
 		}
@@ -86,8 +162,7 @@ public:
 	~Graph() = default;
 
 	//----------- M A I N   F U N C T I O N S ---------
-
-
+	
 	//Addition
 	void addNode(const T& value) {
 		nodes.push_back(std::make_shared<Node<T>>(value));
@@ -106,6 +181,10 @@ public:
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
 
+		if (index_first == std::string::npos || index_second == std::string::npos) {
+			throw std::runtime_error("Invalid input node");
+		}
+
 		if (index_first >= adj_list.size()) {
 			adj_list.resize(index_first + 1);
 		}
@@ -122,6 +201,10 @@ public:
 		node_first->get_neibours().push_back(std::weak_ptr<Node<T>>(node_second));
 
 		size_t index_first = get_index_node(node_first);
+
+		if (index_first == std::string::npos) {
+			throw std::runtime_error("Invalid input node");
+		}
 
 		if (index_first >= adj_list.size()) {
 			adj_list.resize(index_first + 1);
@@ -148,6 +231,7 @@ public:
 			if (nodes[i] && nodes[i]->get_data() == value) {
 				removeAllEdgesOfNode(nodes[i]);
 				nodes.erase(nodes.begin() + i);
+				--nodes_size;
 			}
 		}
 	}
@@ -169,33 +253,81 @@ public:
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
 
-		if (adj_list.size() > index_first || adj_list.size() > index_second) {
-			adj_list[index_first].remove(*get_finding_edge(findEdge(node_first, node_second),0));
-			adj_list[index_second].remove(*get_finding_edge(findEdge(node_first, node_second), 1));
+		if (index_first == std::string::npos && index_second == std::string::npos) {
+			throw std::runtime_error("Adjacency list has invalid size");
+			//TO DO OWN EXEPTION
+		}
+		else if (index_first != std::string::npos && index_second != std::string::npos) {
+			adj_list[index_first].remove(*findEdgeOriented(node_first, node_second, 0, false));
+			adj_list[index_second].remove(*findEdgeOriented(node_second, node_first, 0, false));
+			node_first->get_neibours().remove_if([node_second](const std::weak_ptr<Node<T>>& neighbour_wp) {
+				if (auto neighbour_sp = neighbour_wp.lock()) {
+					return *neighbour_sp == *node_second;
+				}
+				return false;
+				});
+			node_second->get_neibours().remove_if([node_first](const std::weak_ptr<Node<T>>& neighbour_wp) {
+				if (auto neighbour_sp = neighbour_wp.lock()) {
+					return *neighbour_sp == *node_first;
+				}
+				return false;
+				});
+		}
+		else if (index_first == std::string::npos){
+			adj_list[index_second].remove(*findEdgeOriented(node_second, node_first,0,false));
+			node_second->get_neibours().remove_if([node_first](const std::weak_ptr<Node<T>>& neighbour_wp) {
+				if (auto neighbour_sp = neighbour_wp.lock()) {
+					return *neighbour_sp == *node_first;
+				}
+				return false;
+				});
 		}
 		else {
-			throw std::runtime_error("Adjacency list has invalid size");
+			adj_list[index_first].remove(*findEdgeOriented(node_first, node_second,0, false));
+			node_first->get_neibours().remove_if([node_second](const std::weak_ptr<Node<T>>& neighbour_wp) {
+				if (auto neighbour_sp = neighbour_wp.lock()) {
+					return *neighbour_sp == *node_second;
+				}
+				return false;
+				});
 		}
 	}
 	void removeAllEdgesOfNode(const std::shared_ptr<Node<T>> node) {
 		if (!node) { return; }
 		if (adj_list.empty()) { return; }
+
 		size_t index = get_index_node(node);
+		if (index == std::string::npos) {
+			throw std::runtime_error("Invalid input node");
+		}
+
 		if (index < adj_list.size()) {
+			for (auto& edge : adj_list[index]) {
+				removeEdgeOriented(edge.get_to_node(), node);
+			}
 			adj_list[index].clear();
+			node->get_neibours().clear();
 		}
 		else {
 			throw std::runtime_error("Adjacency list has invalid size");
 		}
-
 	}
 	void removeEdgeOriented(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second) {
 		if (!node_first || !node_second) { return; }
 
 		size_t index_first = get_index_node(node_first);
+		if (index_first == std::string::npos) {
+			throw std::runtime_error("Invalid input node");
+		}
 
 		if (adj_list.size() > index_first) {
-			adj_list[index_first].remove(*findEdge(node_first, node_second)[0]);
+			adj_list[index_first].remove(*findEdgeOriented(node_first, node_second,0,false));
+			node_first->get_neibours().remove_if([node_second](const std::weak_ptr<Node<T>>& neighbour_wp) {
+				if (auto neighbour_sp = neighbour_wp.lock()) {
+					return *neighbour_sp == *node_second;
+				}
+				return false;
+				});
 		}
 		else {
 			throw std::runtime_error("Adjacency list has invalid size");
@@ -205,6 +337,20 @@ public:
 		for (size_t i = 0; i < adj_list.size(); ++i) {
 			if (std::find(adj_list[i].begin(), adj_list[i].end(), edge) != adj_list.end()) {
 				adj_list[i].remove(edge);
+				std::shared_ptr<Node<T>> to_node = edge->get_to_node();
+				std::shared_ptr<Node<T>> node = nodes[i];
+				node->get_neibours().remove_if([to_node](const std::weak_ptr<Node<T>>& neighbour_wp) {
+					if (auto neighbour_sp = neighbour_wp.lock()) {
+						return *neighbour_sp == *to_node;
+					}
+					return false;
+					});
+				to_node->get_neibours().remove_if([node](const std::weak_ptr<Node<T>>& neighbour_wp) {
+					if (auto neighbour_sp = neighbour_wp.lock()) {
+						return *neighbour_sp == *node;
+					}
+					return false;
+					});
 				break;
 			}
 		}
@@ -214,6 +360,9 @@ public:
 			adj_list[i].clear();
 		}
 		adj_list.clear();
+		for (size_t i = 0; i < nodes.size(); ++i) {
+			nodes[i]->get_neibours().clear();
+		}
 	}
 
 
@@ -232,9 +381,23 @@ public:
 	size_t getAmountEdge() const {
 		size_t result = 0;
 		for (size_t i = 0; i < adj_list.size(); ++i) {
-			result += adj_list[i].size();
+			size_t dummy = adj_list[i].size();
+			result += dummy;
 		}
 		return result;
+	}
+	size_t getAmountEdgesOfNode(std::shared_ptr<Node<T>> node) {
+		if (!node) { return; }
+
+		size_t index = get_index_node(node);
+		if (index == std::string::npos) {
+			throw std::runtime_error("Invalid input node");
+		}
+
+		if (index > adj_list.size()) {
+			throw std::runtime_error("Wrong size adj_list");
+		}
+		return adj_list[index].size();
 	}
 
 	WEIGHT_TYPE getEdgeWeight(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second) const {
@@ -245,7 +408,12 @@ public:
 		if (!node_first || !node_second) { 
 			return std::string::npos;
 		}
+
 		size_t index = get_index_node(node_first);
+		if (index == std::string::npos) {
+			throw std::runtime_error("Invalid input node");
+		}
+
 		if (index >= adj_list.size()) { 
 			return std::string::npos;
 		}
@@ -259,13 +427,13 @@ public:
 
 
 	void setEdgeOrientedWeight(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE newWeight) {
-		std::shared_ptr<Edge<T, WEIGHT_TYPE>> edge =  findEdgeOriented(node_first, node_second, 0, false);
+		Edge<T, WEIGHT_TYPE>* edge = findEdgeOrientedMutable(node_first, node_second, 0, false);
 		if (edge) {
-			findEdgeOriented(node_first, node_second, 0, false)->set_weight(newWeight);
+			edge->set_weight(newWeight);
 		}
 	}
 	void setEdgeWeight(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE newWeight) {
-		std::vector<std::shared_ptr<Edge<T, WEIGHT_TYPE>>> vec = findEdge(node_first, node_second,0,false);
+		std::vector<Edge<T, WEIGHT_TYPE>*> vec = findEdgeMutable(node_first, node_second,0,false);
 		if (vec.size() != 2) {
 			throw std::runtime_error("Wrong size output \"findEdge\" vector");
 		}
@@ -289,7 +457,7 @@ public:
 	std::shared_ptr<Node<T>> findNode(const T& value) const {
 		for (size_t i = 0; i < nodes.size(); ++i) {
 			if (nodes[i]->get_data() == value) {
-				return std::make_shared<Node<T>>(nodes[i]->get_data());
+				return nodes[i];
 			}
 		}
 		return nullptr;
@@ -297,16 +465,21 @@ public:
 	//Finds the first edge encountered between node_first and node_second
 
 
-	std::vector<std::shared_ptr<Edge<T, WEIGHT_TYPE>>> findEdge(
+	std::vector<const Edge<T, WEIGHT_TYPE>*> findEdge(
 		const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second,
-		WEIGHT_TYPE weight = 0, bool comparable_by_weight = true) const {
-		std::vector<std::shared_ptr<Edge<T, WEIGHT_TYPE>>> result;
+		WEIGHT_TYPE weight = 0, bool comparable_by_weight = true) const
+	{
+		std::vector<const Edge<T, WEIGHT_TYPE>*> result;
+
 		if (!node_first || !node_second) {
 			throw std::runtime_error("Wrong nodes value");
 		}
 
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
+		if (index_first == std::string::npos || index_second == std::string::npos) {
+			throw std::runtime_error("Invalid input node");
+		}
 
 		if (index_first >= adj_list.size() || index_second >= adj_list.size()) {
 			throw std::runtime_error("Adjacency list has invalid size");
@@ -316,14 +489,8 @@ public:
 		for (auto it = list_first.begin(); it != list_first.end(); ++it) {
 			auto to_node = it->get_to_node();
 			if (to_node && to_node == node_second) {
-				if (comparable_by_weight) {
-					if (weight == it->get_weight()) {
-						result.push_back(std::make_shared<Edge<T, WEIGHT_TYPE>>(*it));
-						break;
-					}
-				}
-				else {
-					result.push_back(std::make_shared<Edge<T, WEIGHT_TYPE>>(*it));
+				if (!comparable_by_weight || weight == it->get_weight()) {
+					result.push_back(&(*it));
 					break;
 				}
 			}
@@ -333,27 +500,25 @@ public:
 		for (auto it = list_second.begin(); it != list_second.end(); ++it) {
 			auto to_node = it->get_to_node();
 			if (to_node && to_node == node_first) {
-				if (comparable_by_weight) {
-					if (weight == it->get_weight()) {
-						result.push_back(std::make_shared<Edge<T, WEIGHT_TYPE>>(*it));
-						break;
-					}
-				}
-				else {
-					result.push_back(std::make_shared<Edge<T, WEIGHT_TYPE>>(*it));
+				if (!comparable_by_weight || weight == it->get_weight()) {
+					result.push_back(&(*it));
 					break;
 				}
 			}
 		}
+
 		return result;
 	}
-	std::shared_ptr<Edge<T, WEIGHT_TYPE>> findEdgeOriented(
+	const Edge<T, WEIGHT_TYPE>* findEdgeOriented(
 		const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0, bool comparable_by_weight = true) const {
 		if (!node_first || !node_second) {
 			throw std::runtime_error("Wrong nodes value");
 		}
 
 		size_t index_first = get_index_node(node_first);
+		if (index_first == std::string::npos) {
+			throw std::runtime_error("Invalid input node");
+		}
 
 		if (index_first >= adj_list.size()) {
 			return nullptr;
@@ -365,11 +530,11 @@ public:
 			if (to_node && *to_node == *node_second) {
 				if (comparable_by_weight) {
 					if (edge.get_weight() == weight) {
-						return std::make_shared <Edge<T, WEIGHT_TYPE>>(edge);
+						return &edge;
 					}
 				}
 				else {
-					return std::make_shared <Edge<T, WEIGHT_TYPE>>(edge);
+					return &edge;
 				}
 				
 			}
@@ -385,8 +550,7 @@ public:
 		return (findEdgeOriented(node_first, node_second, weight,(weight == 0 ? false : true)) != nullptr);
 	}
 	bool hasEdge(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0) const {
-		std::vector<std::shared_ptr<Edge<T, WEIGHT_TYPE>>> vec = findEdge(node_first, node_second, weight, (weight == 0 ? false : true));
-		return std::count(vec.begin(), vec.end(), nullptr) == 0;
+		return hasEdgeOriented(node_first, node_second) && hasEdgeOriented(node_second, node_first);
 	}
 
 
