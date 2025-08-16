@@ -9,6 +9,7 @@
 #include <memory>
 #include <stdexcept>
 #include <algorithm>
+#include <limits>
 
 
 template <typename T, typename WEIGHT_TYPE = int>
@@ -108,7 +109,7 @@ private:
 			}
 		}
 
-		return std::string::npos;
+		return std::numeric_limits<size_t>::max();
 	}
 	//Function for unoriented edges
 	const Edge<T,WEIGHT_TYPE>* get_finding_edge(std::vector<const Edge<T, WEIGHT_TYPE>*> vec, size_t pos){
@@ -177,7 +178,7 @@ public:
 
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
-		if (index_first == std::string::npos || index_second == std::string::npos) {
+		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
 			throw std::runtime_error("Invalid input node");
 		}
 
@@ -203,13 +204,13 @@ public:
 		
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
-		if (index_first == std::string::npos || index_second == std::string::npos) {
+		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
 			throw std::runtime_error("Invalid input node");
 		}
 
 		node_first->get_neibours().push_back(std::weak_ptr<Node<T>>(node_second));
 
-		if (index_first == std::string::npos) {
+		if (index_first == std::numeric_limits<size_t>::max()) {
 			throw std::runtime_error("Invalid input node");
 		}
 
@@ -263,11 +264,11 @@ public:
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
 
-		if (index_first == std::string::npos && index_second == std::string::npos) {
+		if (index_first == std::numeric_limits<size_t>::max() && index_second == std::numeric_limits<size_t>::max()) {
 			throw std::runtime_error("Adjacency list has invalid size");
 			//TO DO OWN EXEPTION
 		}
-		else if (index_first != std::string::npos && index_second != std::string::npos) {
+		else if (index_first != std::numeric_limits<size_t>::max() && index_second != std::numeric_limits<size_t>::max()) {
 			adj_list[index_first].remove(*findEdgeOriented(node_first, node_second, 0, false));
 			node_first->get_neibours().remove_if([node_second](const std::weak_ptr<Node<T>>& neighbour_wp) {
 				if (auto neighbour_sp = neighbour_wp.lock()) {
@@ -285,7 +286,7 @@ public:
 					});
 			}
 		}
-		else if (index_first == std::string::npos){
+		else if (index_first == std::numeric_limits<size_t>::max()){
 			adj_list[index_second].remove(*findEdgeOriented(node_second, node_first,0,false));
 			node_second->get_neibours().remove_if([node_first](const std::weak_ptr<Node<T>>& neighbour_wp) {
 				if (auto neighbour_sp = neighbour_wp.lock()) {
@@ -308,7 +309,7 @@ public:
 		if (!node) { return; }
 
 		size_t index = get_index_node(node);
-		if (index == std::string::npos) {
+		if (index == std::numeric_limits<size_t>::max()) {
 			throw std::runtime_error("Invalid input node");
 		}
 
@@ -332,7 +333,7 @@ public:
 
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
-		if (index_first == std::string::npos || index_second == std::string::npos) {
+		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
 			throw std::runtime_error("Invalid input node");
 		}
 
@@ -405,7 +406,7 @@ public:
 		}
 
 		size_t index = get_index_node(node);
-		if (index == std::string::npos) {
+		if (index == std::numeric_limits<size_t>::max()) {
 			throw std::runtime_error("Invalid input node");
 		}
 
@@ -416,29 +417,29 @@ public:
 	}
 
 	WEIGHT_TYPE getEdgeWeight(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second) const {
-		size_t weight_edge_f = getEdgeWeightOriented(node_first, node_second);
+		WEIGHT_TYPE weight_edge_f = getEdgeWeightOriented(node_first, node_second);
 		return weight_edge_f;
 	}
 	WEIGHT_TYPE getEdgeWeightOriented(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second) const {
 		if (!node_first || !node_second) { 
-			return std::string::npos;
+			return std::numeric_limits<WEIGHT_TYPE>::max();
 		}
 
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
-		if (index_first == std::string::npos || index_second == std::string::npos) {
+		if (index_first == std::numeric_limits<WEIGHT_TYPE>::max() || index_second == std::numeric_limits<WEIGHT_TYPE>::max()) {
 			throw std::runtime_error("Invalid input node");
 		}
 
 		if (index_first >= adj_list.size()) {
-			return std::string::npos;
+			return std::numeric_limits<WEIGHT_TYPE>::max();
 		}
 		for (auto it = adj_list[index_first].begin(); it != adj_list[index_first].end(); ++it) {
 			if (*(it->get_to_node()) == *(node_second)) {
 				return it->get_weight();
 			}
 		}
-		return std::string::npos;
+		return std::numeric_limits<WEIGHT_TYPE>::max();
 	}
 
 
@@ -493,7 +494,7 @@ public:
 
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
-		if (index_first == std::string::npos || index_second == std::string::npos) {
+		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
 			throw std::runtime_error("Invalid input node");
 		}
 
@@ -539,7 +540,7 @@ public:
 
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
-		if (index_first == std::string::npos || index_second == std::string::npos) {
+		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
 			throw std::runtime_error("Invalid input node");
 		}
 
