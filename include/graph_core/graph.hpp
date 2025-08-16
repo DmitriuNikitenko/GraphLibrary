@@ -175,14 +175,15 @@ public:
 	void addEdge(std::shared_ptr<Node<T>> node_first, std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0) {
 		if (!node_first || !node_second) { return; }
 
-		node_first->get_neibours().push_back(std::weak_ptr<Node<T>>(node_second));
-		node_second->get_neibours().push_back(std::weak_ptr<Node<T>>(node_first));
-
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
-
 		if (index_first == std::string::npos || index_second == std::string::npos) {
 			throw std::runtime_error("Invalid input node");
+		}
+
+		node_first->get_neibours().push_back(std::weak_ptr<Node<T>>(node_second));
+		if (index_first != index_second) {
+			node_second->get_neibours().push_back(std::weak_ptr<Node<T>>(node_first));
 		}
 
 		if (index_first >= adj_list.size()) {
@@ -193,14 +194,20 @@ public:
 		}
 
 		adj_list[index_first].push_back(Edge<T, WEIGHT_TYPE>(node_second, weight));
-		adj_list[index_second].push_back(Edge<T, WEIGHT_TYPE>(node_first, weight));
+		if (index_first != index_second) {
+			adj_list[index_second].push_back(Edge<T, WEIGHT_TYPE>(node_first, weight));
+		}
 	}
 	void addEdgeOriented(std::shared_ptr<Node<T>> node_first, std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0) {
 		if (!node_first || !node_second) { return; }
+		
+		size_t index_first = get_index_node(node_first);
+		size_t index_second = get_index_node(node_second);
+		if (index_first == std::string::npos || index_second == std::string::npos) {
+			throw std::runtime_error("Invalid input node");
+		}
 
 		node_first->get_neibours().push_back(std::weak_ptr<Node<T>>(node_second));
-
-		size_t index_first = get_index_node(node_first);
 
 		if (index_first == std::string::npos) {
 			throw std::runtime_error("Invalid input node");
@@ -227,11 +234,14 @@ public:
 	}
 	void removeAllNodeWithValue(const T& value) {
 		size_t nodes_size = nodes.size();
-		for (size_t i = 0; i < nodes_size; ++i) {
+		for (size_t i = 0; i < nodes_size;) {
 			if (nodes[i] && nodes[i]->get_data() == value) {
 				removeAllEdgesOfNode(nodes[i]);
 				nodes.erase(nodes.begin() + i);
 				--nodes_size;
+			}
+			else {
+				++i;
 			}
 		}
 	}
@@ -259,19 +269,21 @@ public:
 		}
 		else if (index_first != std::string::npos && index_second != std::string::npos) {
 			adj_list[index_first].remove(*findEdgeOriented(node_first, node_second, 0, false));
-			adj_list[index_second].remove(*findEdgeOriented(node_second, node_first, 0, false));
 			node_first->get_neibours().remove_if([node_second](const std::weak_ptr<Node<T>>& neighbour_wp) {
 				if (auto neighbour_sp = neighbour_wp.lock()) {
 					return *neighbour_sp == *node_second;
 				}
 				return false;
 				});
-			node_second->get_neibours().remove_if([node_first](const std::weak_ptr<Node<T>>& neighbour_wp) {
-				if (auto neighbour_sp = neighbour_wp.lock()) {
-					return *neighbour_sp == *node_first;
-				}
-				return false;
-				});
+			if (index_first != index_second) {
+				adj_list[index_second].remove(*findEdgeOriented(node_second, node_first, 0, false));
+				node_second->get_neibours().remove_if([node_first](const std::weak_ptr<Node<T>>& neighbour_wp) {
+					if (auto neighbour_sp = neighbour_wp.lock()) {
+						return *neighbour_sp == *node_first;
+					}
+					return false;
+					});
+			}
 		}
 		else if (index_first == std::string::npos){
 			adj_list[index_second].remove(*findEdgeOriented(node_second, node_first,0,false));
@@ -294,11 +306,14 @@ public:
 	}
 	void removeAllEdgesOfNode(const std::shared_ptr<Node<T>> node) {
 		if (!node) { return; }
-		if (adj_list.empty()) { return; }
 
 		size_t index = get_index_node(node);
 		if (index == std::string::npos) {
 			throw std::runtime_error("Invalid input node");
+		}
+
+		if (adj_list.empty()) { 
+			return;
 		}
 
 		if (index < adj_list.size()) {
@@ -316,7 +331,8 @@ public:
 		if (!node_first || !node_second) { return; }
 
 		size_t index_first = get_index_node(node_first);
-		if (index_first == std::string::npos) {
+		size_t index_second = get_index_node(node_second);
+		if (index_first == std::string::npos || index_second == std::string::npos) {
 			throw std::runtime_error("Invalid input node");
 		}
 
@@ -328,9 +344,6 @@ public:
 				}
 				return false;
 				});
-		}
-		else {
-			throw std::runtime_error("Adjacency list has invalid size");
 		}
 	}
 	void removeEdge(std::shared_ptr<Edge<T, WEIGHT_TYPE>> edge) {
@@ -387,7 +400,9 @@ public:
 		return result;
 	}
 	size_t getAmountEdgesOfNode(std::shared_ptr<Node<T>> node) {
-		if (!node) { return; }
+		if (!node) { 
+			throw std::runtime_error("nullptr node");
+		}
 
 		size_t index = get_index_node(node);
 		if (index == std::string::npos) {
@@ -409,15 +424,16 @@ public:
 			return std::string::npos;
 		}
 
-		size_t index = get_index_node(node_first);
-		if (index == std::string::npos) {
+		size_t index_first = get_index_node(node_first);
+		size_t index_second = get_index_node(node_second);
+		if (index_first == std::string::npos || index_second == std::string::npos) {
 			throw std::runtime_error("Invalid input node");
 		}
 
-		if (index >= adj_list.size()) { 
+		if (index_first >= adj_list.size()) {
 			return std::string::npos;
 		}
-		for (auto it = adj_list[index].begin(); it != adj_list[index].end(); ++it) {
+		for (auto it = adj_list[index_first].begin(); it != adj_list[index_first].end(); ++it) {
 			if (*(it->get_to_node()) == *(node_second)) {
 				return it->get_weight();
 			}
@@ -491,9 +507,15 @@ public:
 			if (to_node && to_node == node_second) {
 				if (!comparable_by_weight || weight == it->get_weight()) {
 					result.push_back(&(*it));
-					break;
+					if (index_first != index_second) {
+						break;
+					}
 				}
 			}
+		}
+
+		if (index_first == index_second) {
+			return result;
 		}
 
 		auto& list_second = adj_list[index_second];
@@ -516,7 +538,8 @@ public:
 		}
 
 		size_t index_first = get_index_node(node_first);
-		if (index_first == std::string::npos) {
+		size_t index_second = get_index_node(node_second);
+		if (index_first == std::string::npos || index_second == std::string::npos) {
 			throw std::runtime_error("Invalid input node");
 		}
 
