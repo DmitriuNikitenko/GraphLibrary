@@ -17,11 +17,9 @@ public:
 	std::shared_ptr<Node<T>> get_to_node() const {
 		return to_node.lock();
 	}
-
 	void set_weight(WEIGHT_TYPE _weight) {
 		weight = _weight;
 	}
-
 	WEIGHT_TYPE get_weight() const {
 		return weight;
 	}
@@ -34,5 +32,4 @@ public:
 		return this_to_node && other_to_node &&
 			this_to_node == other_to_node && weight == other.weight;
 	}
-
 };
