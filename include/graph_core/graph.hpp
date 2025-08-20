@@ -3,6 +3,7 @@
 
 #include "node.hpp"
 #include "edge.hpp"
+#include "../exceptions.hpp"
 #include <vector>
 #include <list>
 #include <string>
@@ -32,14 +33,17 @@ private:
 		std::vector<Edge<T, WEIGHT_TYPE>*> result;
 
 		if (!node_first || !node_second) {
-			throw std::runtime_error("Wrong nodes value");
+			throw NodeIsNullException();
 		}
 
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
+		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
+			throw NodeNotFoundException();
+		}
 
 		if (index_first >= adj_list.size() || index_second >= adj_list.size()) {
-			throw std::runtime_error("Adjacency list has invalid size");
+			throw InvalidIndexException();
 		}
 
 		auto& list_first = adj_list[index_first];
@@ -70,10 +74,14 @@ private:
 	Edge<T, WEIGHT_TYPE>* findEdgeOrientedMutable(
 		const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0, bool comparable_by_weight = true) {
 		if (!node_first || !node_second) {
-			throw std::runtime_error("Wrong nodes value");
+			throw NodeIsNullException();
 		}
 
 		size_t index_first = get_index_node(node_first);
+		size_t index_second = get_index_node(node_second);
+		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
+			throw NodeNotFoundException();
+		}
 
 		if (index_first >= adj_list.size()) {
 			return nullptr;
@@ -100,7 +108,7 @@ private:
 
 	size_t get_index_node(std::shared_ptr<Node<T>> node) const {
 		if (!node) {
-			throw std::runtime_error("Invalid index node");
+			throw NodeIsNullException();
 		}
 
 		for (size_t i = 0; i < nodes.size(); ++i) {
@@ -112,7 +120,7 @@ private:
 		return std::numeric_limits<size_t>::max();
 	}
 	//Function for unoriented edges
-	const Edge<T,WEIGHT_TYPE>* get_finding_edge(std::vector<const Edge<T, WEIGHT_TYPE>*> vec, size_t pos){
+	const Edge<T, WEIGHT_TYPE>* get_finding_edge(std::vector<const Edge<T, WEIGHT_TYPE>*> vec, size_t pos) {
 		if (pos != 0 && pos != 1) {
 			throw std::runtime_error("Wrong index in getter finding edge");
 		}
@@ -123,7 +131,7 @@ private:
 	}
 public:
 	//Construstors and destructor
-	Graph()	: nodes(), adj_list() {}
+	Graph() : nodes(), adj_list() {}
 	Graph(size_t amount_nodes, const T& value = T())  requires std::default_initializable<T> {
 		for (size_t i = 0; i < amount_nodes; ++i) {
 			nodes.push_back(std::make_shared<Node<T>>(value));
@@ -146,10 +154,10 @@ public:
 				auto orig_to_node = orig_edge.get_to_node();
 				for (size_t j = 0; j < nodes.size(); ++j) {
 					if (orig_to_node && *orig_to_node == *nodes[j]) {
-						adj_list[i].push_back(Edge<T, WEIGHT_TYPE>(nodes[j],orig_edge.get_weight()));
+						adj_list[i].push_back(Edge<T, WEIGHT_TYPE>(nodes[j], orig_edge.get_weight()));
 						break;
 					}
-				}	
+				}
 			}
 		}
 
@@ -163,7 +171,7 @@ public:
 	~Graph() = default;
 
 	//----------- M A I N   F U N C T I O N S ---------
-	
+
 	//Addition
 	void addNode(const T& value) {
 		nodes.push_back(std::make_shared<Node<T>>(value));
@@ -179,7 +187,7 @@ public:
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
 		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
-			throw std::runtime_error("Invalid input node");
+			throw NodeNotFoundException();
 		}
 
 		node_first->get_neibours().push_back(std::weak_ptr<Node<T>>(node_second));
@@ -201,23 +209,19 @@ public:
 	}
 	void addEdgeOriented(std::shared_ptr<Node<T>> node_first, std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0) {
 		if (!node_first || !node_second) { return; }
-		
+
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
 		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
-			throw std::runtime_error("Invalid input node");
+			throw NodeNotFoundException();
 		}
 
 		node_first->get_neibours().push_back(std::weak_ptr<Node<T>>(node_second));
 
-		if (index_first == std::numeric_limits<size_t>::max()) {
-			throw std::runtime_error("Invalid input node");
-		}
-
 		if (index_first >= adj_list.size()) {
 			adj_list.resize(index_first + 1);
 		}
-		
+
 		adj_list[index_first].push_back(Edge<T, WEIGHT_TYPE>(node_second, weight));
 	}
 
@@ -265,8 +269,7 @@ public:
 		size_t index_second = get_index_node(node_second);
 
 		if (index_first == std::numeric_limits<size_t>::max() && index_second == std::numeric_limits<size_t>::max()) {
-			throw std::runtime_error("Adjacency list has invalid size");
-			//TO DO OWN EXEPTION
+			throw NodeNotFoundException();
 		}
 		else if (index_first != std::numeric_limits<size_t>::max() && index_second != std::numeric_limits<size_t>::max()) {
 			adj_list[index_first].remove(*findEdgeOriented(node_first, node_second, 0, false));
@@ -286,8 +289,8 @@ public:
 					});
 			}
 		}
-		else if (index_first == std::numeric_limits<size_t>::max()){
-			adj_list[index_second].remove(*findEdgeOriented(node_second, node_first,0,false));
+		else if (index_first == std::numeric_limits<size_t>::max()) {
+			adj_list[index_second].remove(*findEdgeOriented(node_second, node_first, 0, false));
 			node_second->get_neibours().remove_if([node_first](const std::weak_ptr<Node<T>>& neighbour_wp) {
 				if (auto neighbour_sp = neighbour_wp.lock()) {
 					return *neighbour_sp == *node_first;
@@ -296,7 +299,7 @@ public:
 				});
 		}
 		else {
-			adj_list[index_first].remove(*findEdgeOriented(node_first, node_second,0, false));
+			adj_list[index_first].remove(*findEdgeOriented(node_first, node_second, 0, false));
 			node_first->get_neibours().remove_if([node_second](const std::weak_ptr<Node<T>>& neighbour_wp) {
 				if (auto neighbour_sp = neighbour_wp.lock()) {
 					return *neighbour_sp == *node_second;
@@ -310,10 +313,10 @@ public:
 
 		size_t index = get_index_node(node);
 		if (index == std::numeric_limits<size_t>::max()) {
-			throw std::runtime_error("Invalid input node");
+			throw NodeNotFoundException();
 		}
 
-		if (adj_list.empty()) { 
+		if (adj_list.empty()) {
 			return;
 		}
 
@@ -325,7 +328,7 @@ public:
 			node->get_neibours().clear();
 		}
 		else {
-			throw std::runtime_error("Adjacency list has invalid size");
+			throw InvalidIndexException();
 		}
 	}
 	void removeEdgeOriented(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second) {
@@ -334,11 +337,11 @@ public:
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
 		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
-			throw std::runtime_error("Invalid input node");
+			throw NodeNotFoundException();
 		}
 
 		if (adj_list.size() > index_first) {
-			adj_list[index_first].remove(*findEdgeOriented(node_first, node_second,0,false));
+			adj_list[index_first].remove(*findEdgeOriented(node_first, node_second, 0, false));
 			node_first->get_neibours().remove_if([node_second](const std::weak_ptr<Node<T>>& neighbour_wp) {
 				if (auto neighbour_sp = neighbour_wp.lock()) {
 					return *neighbour_sp == *node_second;
@@ -401,17 +404,17 @@ public:
 		return result;
 	}
 	size_t getAmountEdgesOfNode(std::shared_ptr<Node<T>> node) {
-		if (!node) { 
-			throw std::runtime_error("nullptr node");
+		if (!node) {
+			throw NodeIsNullException();
 		}
 
 		size_t index = get_index_node(node);
 		if (index == std::numeric_limits<size_t>::max()) {
-			throw std::runtime_error("Invalid input node");
+			throw NodeNotFoundException();
 		}
 
 		if (index > adj_list.size()) {
-			throw std::runtime_error("Wrong size adj_list");
+			throw InvalidIndexException();
 		}
 		return adj_list[index].size();
 	}
@@ -421,14 +424,14 @@ public:
 		return weight_edge_f;
 	}
 	WEIGHT_TYPE getEdgeWeightOriented(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second) const {
-		if (!node_first || !node_second) { 
+		if (!node_first || !node_second) {
 			return std::numeric_limits<WEIGHT_TYPE>::max();
 		}
 
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
 		if (index_first == std::numeric_limits<WEIGHT_TYPE>::max() || index_second == std::numeric_limits<WEIGHT_TYPE>::max()) {
-			throw std::runtime_error("Invalid input node");
+			throw NodeNotFoundException();
 		}
 
 		if (index_first >= adj_list.size()) {
@@ -450,7 +453,7 @@ public:
 		}
 	}
 	void setEdgeWeight(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE newWeight) {
-		std::vector<Edge<T, WEIGHT_TYPE>*> vec = findEdgeMutable(node_first, node_second,0,false);
+		std::vector<Edge<T, WEIGHT_TYPE>*> vec = findEdgeMutable(node_first, node_second, 0, false);
 		if (vec.size() != 2) {
 			throw std::runtime_error("Wrong size output \"findEdge\" vector");
 		}
@@ -489,17 +492,17 @@ public:
 		std::vector<const Edge<T, WEIGHT_TYPE>*> result;
 
 		if (!node_first || !node_second) {
-			throw std::runtime_error("Wrong nodes value");
+			throw NodeIsNullException();
 		}
 
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
 		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
-			throw std::runtime_error("Invalid input node");
+			throw NodeNotFoundException();
 		}
 
 		if (index_first >= adj_list.size() || index_second >= adj_list.size()) {
-			throw std::runtime_error("Adjacency list has invalid size");
+			throw InvalidIndexException();
 		}
 
 		auto& list_first = adj_list[index_first];
@@ -535,13 +538,13 @@ public:
 	const Edge<T, WEIGHT_TYPE>* findEdgeOriented(
 		const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0, bool comparable_by_weight = true) const {
 		if (!node_first || !node_second) {
-			throw std::runtime_error("Wrong nodes value");
+			throw NodeIsNullException();
 		}
 
 		size_t index_first = get_index_node(node_first);
 		size_t index_second = get_index_node(node_second);
 		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
-			throw std::runtime_error("Invalid input node");
+			throw NodeNotFoundException();
 		}
 
 		if (index_first >= adj_list.size()) {
@@ -560,7 +563,7 @@ public:
 				else {
 					return &edge;
 				}
-				
+
 			}
 		}
 		return nullptr;
@@ -571,7 +574,7 @@ public:
 		return !(findNode(value) == nullptr);
 	}
 	bool hasEdgeOriented(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0) const {
-		return (findEdgeOriented(node_first, node_second, weight,(weight == 0 ? false : true)) != nullptr);
+		return (findEdgeOriented(node_first, node_second, weight, (weight == 0 ? false : true)) != nullptr);
 	}
 	bool hasEdge(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0) const {
 		return hasEdgeOriented(node_first, node_second) && hasEdgeOriented(node_second, node_first);
@@ -587,7 +590,7 @@ public:
 
 
 	//Operators
-	Graph<T, WEIGHT_TYPE>& operator=(const Graph<T,WEIGHT_TYPE>& other) {
+	Graph<T, WEIGHT_TYPE>& operator=(const Graph<T, WEIGHT_TYPE>& other) {
 		if (&other != this) {
 			clear();
 			nodes = other.nodes;
