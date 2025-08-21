@@ -31,46 +31,11 @@ private:
 		WEIGHT_TYPE weight = 0, bool comparable_by_weight = true)
 	{
 		std::vector<Edge<T, WEIGHT_TYPE>*> result;
-
-		if (!node_first || !node_second) {
-			throw NodeIsNullException();
-		}
-
-		size_t index_first = get_index_node(node_first);
-		size_t index_second = get_index_node(node_second);
-		if (index_first == std::numeric_limits<size_t>::max() || index_second == std::numeric_limits<size_t>::max()) {
-			throw NodeNotFoundException();
-		}
-
-		if (index_first >= adj_list.size() || index_second >= adj_list.size()) {
-			throw InvalidIndexException();
-		}
-
-		auto& list_first = adj_list[index_first];
-		for (auto it = list_first.begin(); it != list_first.end(); ++it) {
-			auto to_node = it->get_to_node();
-			if (to_node && to_node == node_second) {
-				if (!comparable_by_weight || weight == it->get_weight()) {
-					result.push_back(&(*it));
-					break;
-				}
-			}
-		}
-
-		auto& list_second = adj_list[index_second];
-		for (auto it = list_second.begin(); it != list_second.end(); ++it) {
-			auto to_node = it->get_to_node();
-			if (to_node && to_node == node_first) {
-				if (!comparable_by_weight || weight == it->get_weight()) {
-					result.push_back(&(*it));
-					break;
-				}
-			}
-		}
-
+		result.push_back(findEdgeMutable(node_first, node_second, weight, comparable_by_weight));
+		result.push_back(findEdgeMutable(node_second, node_first, weight, comparable_by_weight));
 		return result;
 	}
-
+	
 	Edge<T, WEIGHT_TYPE>* findEdgeOrientedMutable(
 		const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second, WEIGHT_TYPE weight = 0, bool comparable_by_weight = true) {
 		if (!node_first || !node_second) {
@@ -104,8 +69,7 @@ private:
 		}
 		return nullptr;
 	}
-
-
+	
 	size_t get_index_node(std::shared_ptr<Node<T>> node) const {
 		if (!node) {
 			throw NodeIsNullException();
@@ -118,16 +82,6 @@ private:
 		}
 
 		return std::numeric_limits<size_t>::max();
-	}
-	//Function for unoriented edges
-	const Edge<T, WEIGHT_TYPE>* get_finding_edge(std::vector<const Edge<T, WEIGHT_TYPE>*> vec, size_t pos) {
-		if (pos != 0 && pos != 1) {
-			throw std::runtime_error("Wrong index in getter finding edge");
-		}
-		if (vec.size() != 2) {
-			throw std::runtime_error("Wrong size output \"findEdge\" vector");
-		}
-		return vec[pos];
 	}
 public:
 	//Construstors and destructor
@@ -170,7 +124,9 @@ public:
 	Graph(Graph<T, WEIGHT_TYPE>&& other) noexcept : nodes(std::move(other.nodes)), adj_list(std::move(other.adj_list)) {}
 	~Graph() = default;
 
+
 	//----------- M A I N   F U N C T I O N S ---------
+
 
 	//Addition
 	void addNode(const T& value) {
@@ -419,6 +375,7 @@ public:
 		return adj_list[index].size();
 	}
 
+
 	WEIGHT_TYPE getEdgeWeight(const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second) const {
 		WEIGHT_TYPE weight_edge_f = getEdgeWeightOriented(node_first, node_second);
 		return weight_edge_f;
@@ -483,8 +440,6 @@ public:
 		return nullptr;
 	}
 	//Finds the first edge encountered between node_first and node_second
-
-
 	std::vector<const Edge<T, WEIGHT_TYPE>*> findEdge(
 		const std::shared_ptr<Node<T>> node_first, const std::shared_ptr<Node<T>> node_second,
 		WEIGHT_TYPE weight = 0, bool comparable_by_weight = true) const
