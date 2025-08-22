@@ -13,16 +13,16 @@ namespace graph_library {
         virtual ~GraphException() = default;
     };
 
-    // Exception for when a node is not found in the graph
-    class NodeNotFoundException : public GraphException {
+    // Exception for when a node is null
+    class NodeIsNullException : public GraphException {
     public:
-        NodeNotFoundException(const std::string& message = "Node not found") : GraphException(message) {}
+        NodeIsNullException(const std::string& message = "Node is null") : GraphException(message) {}
     };
 
-    // Exception for when an edge is not found
-    class EdgeNotFoundException : public GraphException {
+    // The node not found in the list of available ones.
+    class NodeNotFoundException : public GraphException {
     public:
-        EdgeNotFoundException(const std::string& message = "Edge not found") : GraphException(message) {}
+        NodeNotFoundException(const std::string& message = "The node not found in the list of available ones") : GraphException(message) {}
     };
 
     // Exception for when an invalid index is passed
@@ -42,28 +42,6 @@ namespace graph_library {
     public:
         ParseException(const std::string& message) : GraphException(message) {}
     };
-
-    // Exception for when a cycle is detected in a graph
-    // and the algorithm doesn't support it
-    class CycleDetectedException : public GraphException {
-    public:
-        CycleDetectedException(const std::string& message = "Cycle detected") : GraphException(message) {}
-    };
-
-    // Exception for when a weighted graph is required
-    // but the graph is unweighted
-    class UnweightedGraphException : public GraphException {
-    public:
-        UnweightedGraphException(const std::string& message = "Graph must have weights") : GraphException(message) {}
-    };
-
-    // Exception for when an unweighted graph is required
-    // but the graph has weights
-    class WeightedGraphException : public GraphException {
-    public:
-        WeightedGraphException(const std::string& message = "Graph must not have weights") : GraphException(message) {}
-    };
-
 }
 
 #endif
